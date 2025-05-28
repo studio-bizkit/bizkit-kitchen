@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -6,12 +5,13 @@ import { Dashboard } from "@/components/Dashboard"
 import { Projects } from "@/components/Projects"
 import { KanbanBoard } from "@/components/KanbanBoard"
 import { Clients } from "@/components/Clients"
+import { Users } from "@/components/Users"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { AuthProvider, useAuth } from "@/components/auth/AuthProvider"
 import { LoginForm } from "@/components/auth/LoginForm"
 
-type View = "dashboard" | "projects" | "kanban" | "clients" | "time"
+type View = "dashboard" | "projects" | "tasks" | "clients" | "reports" | "settings"
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<View>("dashboard")
@@ -38,22 +38,19 @@ function AppContent() {
         return <Dashboard />
       case "projects":
         return <Projects />
-      case "kanban":
+      case "tasks":
         return <KanbanBoard />
       case "clients":
+        return <Clients />
+      case "reports":
         return (
           <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-            <p className="text-gray-500">Client management features are being built...</p>
+            <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
+            <p className="text-gray-500">Reports and analytics are being built, give bilal some time...</p>
           </div>
         )
-      case "time":
-        return (
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900">Time Tracking</h1>
-            <p className="text-gray-500">Advanced time tracking features are being built...</p>
-          </div>
-        )
+      case "settings":
+        return <Users />
       default:
         return <Dashboard />
     }

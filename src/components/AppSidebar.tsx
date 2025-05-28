@@ -1,5 +1,13 @@
-
-import { Calendar, Clock, Folder, Home, Kanban, Users, LogOut } from "lucide-react"
+import {
+  Calendar,
+  Clock,
+  Folder,
+  Home,
+  Kanban,
+  Users,
+  LogOut,
+  UserCog,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,15 +19,23 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
-} from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/components/auth/AuthProvider"
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { ProfileCard } from "@/components/ProfileCard";
+import { supabase } from "@/integrations/supabase/client";
 
-type View = "dashboard" | "projects" | "kanban" | "clients" | "time"
+type View =
+  | "dashboard"
+  | "projects"
+  | "tasks"
+  | "clients"
+  | "reports"
+  | "settings";
 
 interface AppSidebarProps {
-  currentView: View
-  onViewChange: (view: View) => void
+  currentView: View;
+  onViewChange: (view: View) => void;
 }
 
 const navigationItems = [
@@ -34,8 +50,8 @@ const navigationItems = [
     icon: Folder,
   },
   {
-    title: "Kanban",
-    id: "kanban" as View,
+    title: "Tasks",
+    id: "tasks" as View,
     icon: Kanban,
   },
   {
@@ -44,33 +60,43 @@ const navigationItems = [
     icon: Users,
   },
   {
-    title: "Time Tracking",
-    id: "time" as View,
+    title: "Reports",
+    id: "reports" as View,
     icon: Clock,
   },
-]
+  {
+    title: "Settings",
+    id: "settings" as View,
+    icon: UserCog,
+    adminOnly: true,
+  },
+];
 
 export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
-  const { signOut, user } = useAuth()
+  const { data: authData } = useAuth();
+  const isAdmin = authData?.user?.role === "Admin";
 
   const handleSignOut = async () => {
     try {
-      await signOut()
+      await supabase.auth.signOut();
     } catch (error) {
-      console.error('Error signing out:', error)
+      console.error("Error signing out:", error);
     }
-  }
+  };
 
   return (
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Kanban className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-transparent flex items-center justify-center">
+            <img src="/logo.png" alt="Kitchen Logo" className="w-10 h-10" />
           </div>
           <div>
             <h2 className="font-bold text-lg">Kitchen</h2>
             <p className="text-xs text-gray-500">Studio Bizkit</p>
+          </div>
+          <div className="w-10 h-10 bg-transparent flex items-center justify-center">
+            <div></div>
           </div>
         </div>
       </SidebarHeader>
@@ -79,35 +105,38 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    isActive={currentView === item.id}
-                    onClick={() => onViewChange(item.id)}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navigationItems.map(item => {
+                // Skip admin-only items if user is not admin
+                if (item.adminOnly && !isAdmin) return null;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={currentView === item.id}
+                      onClick={() => onViewChange(item.id)}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <div className="space-y-2">
-          <p className="text-sm text-gray-500">{user?.email}</p>
-          <Button
-            onClick={handleSignOut}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
+        <ProfileCard />
+        <Button
+          onClick={handleSignOut}
+          variant="outline"
+          size="sm"
+          className="w-full mt-4"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Tables, TablesInsert } from '@/integrations/supabase/types'
@@ -84,4 +83,17 @@ export function useStopTimeTracking() {
       queryClient.invalidateQueries({ queryKey: ['active-time-entry'] })
     },
   })
+}
+
+export function useTimeTracking() {
+  const { data: activeEntry } = useActiveTimeEntry()
+  const startTracking = useStartTimeTracking()
+  const stopTracking = useStopTimeTracking()
+
+  return {
+    activeEntry,
+    isTracking: !!activeEntry,
+    startTracking,
+    stopTracking,
+  }
 }

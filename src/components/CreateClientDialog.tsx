@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -33,9 +32,8 @@ export function CreateClientDialog({ open, onOpenChange }: CreateClientDialogPro
         name,
         email: email || null,
         phone: phone || null,
-        website: website || null,
-        notes: notes || null,
-        created_by: user.id
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
 
       // Reset form

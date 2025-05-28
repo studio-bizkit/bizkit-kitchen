@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -6,9 +5,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useUpdateClient } from "@/hooks/useClients"
+import { Tables } from "@/integrations/supabase/types"
 
 interface EditClientDialogProps {
-  client: any
+  client: Tables<'clients'>
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -44,8 +44,6 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
           name,
           email: email || null,
           phone: phone || null,
-          website: website || null,
-          notes: notes || null,
           updated_at: new Date().toISOString()
         }
       })

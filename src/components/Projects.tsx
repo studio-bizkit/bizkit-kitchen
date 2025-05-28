@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,66 +6,37 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Calendar, Users, MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useProjects, useDeleteProject } from "@/hooks/useProjects"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CreateProjectDialog } from "@/components/CreateProjectDialog"
+import { EditProjectDialog } from "@/components/EditProjectDialog"
+import { ManageTeamDialog } from "@/components/ManageTeamDialog"
+import { Tables } from "@/integrations/supabase/types"
 
-// Mock data
-const mockProjects = [
-  {
-    id: 1,
-    name: "Brand Redesign",
-    client: "TechCorp Inc.",
-    status: "In Progress",
-    progress: 65,
-    dueDate: "2024-06-15",
-    team: ["John", "Sarah", "Mike"],
-    type: "Client",
-    description: "Complete brand overhaul including logo, colors, and style guide"
-  },
-  {
-    id: 2,
-    name: "Website Optimization",
-    client: "Internal",
-    status: "Planning",
-    progress: 20,
-    dueDate: "2024-07-01",
-    team: ["Emma", "David"],
-    type: "Internal",
-    description: "Improve site performance and user experience"
-  },
-  {
-    id: 3,
-    name: "Mobile App Design",
-    client: "StartupXYZ",
-    status: "Review",
-    progress: 90,
-    dueDate: "2024-05-30",
-    team: ["Alex", "Lisa"],
-    type: "Client",
-    description: "UI/UX design for iOS and Android mobile application"
-  },
-  {
-    id: 4,
-    name: "Marketing Campaign",
-    client: "Fashion Brand Co.",
-    status: "In Progress",
-    progress: 45,
-    dueDate: "2024-06-20",
-    team: ["Sophie", "James"],
-    type: "Client",
-    description: "Digital marketing campaign for summer collection launch"
-  }
-]
+type Project = Tables<'projects'> & {
+  client: Tables<'clients'> | null
+  project_members: (Tables<'project_members'> & {
+    profiles: Tables<'profiles'> | null
+  })[]
+}
 
 export function Projects() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [managingTeamProject, setManagingTeamProject] = useState<Project | null>(null)
 
-  const filteredProjects = mockProjects.filter(project => {
+  const { data: projects = [], isLoading, error } = useProjects()
+  const deleteProjectMutation = useDeleteProject()
+
+  const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.client.toLowerCase().includes(searchTerm.toLowerCase())
+                         project.client?.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || project.type.toLowerCase() === filterType
     const matchesStatus = filterStatus === "all" || project.status.toLowerCase().replace(" ", "") === filterStatus
-    
+
     return matchesSearch && matchesType && matchesStatus
   })
 
@@ -84,6 +54,36 @@ export function Projects() {
     return type === "Client" ? "bg-primary/10 text-primary" : "bg-purple-100 text-purple-800"
   }
 
+  const handleDeleteProject = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await deleteProjectMutation.mutateAsync(id)
+      } catch (error) {
+        console.error('Failed to delete project:', error)
+      }
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
+        <div className="text-center py-8">Loading projects...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
+        <Alert variant="destructive">
+          <AlertDescription>Failed to load projects. Please try again.</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,7 +92,7 @@ export function Projects() {
           <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
           <p className="text-gray-500 mt-1">Manage your projects and track progress</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button onClick={() => setShowCreateDialog(true)} className="bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4 mr-2" />
           New Project
         </Button>
@@ -141,7 +141,7 @@ export function Projects() {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-lg">{project.name}</CardTitle>
-                  <CardDescription>{project.client}</CardDescription>
+                  <CardDescription>{project.client?.name || 'Internal'}</CardDescription>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -150,10 +150,9 @@ export function Projects() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Edit Project</DropdownMenuItem>
-                    <DropdownMenuItem>Manage Team</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Archive</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditingProject(project)}>Edit Project</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setManagingTeamProject(project)}>Manage Team</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDeleteProject(project.id)} className="text-red-600">Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -168,28 +167,15 @@ export function Projects() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 line-clamp-2">{project.description}</p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Progress</span>
-                  <span className="font-medium">{project.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${project.progress}%` }}
-                  ></div>
-                </div>
-              </div>
 
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{project.dueDate}</span>
+                  <span>{project.due_date}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  <span>{project.team.length} members</span>
+                  <span>{project.project_members.length} members</span>
                 </div>
               </div>
 
@@ -211,6 +197,27 @@ export function Projects() {
           <div className="text-gray-400 text-lg mb-2">No projects found</div>
           <p className="text-gray-500">Try adjusting your filters or create a new project</p>
         </div>
+      )}
+
+      <CreateProjectDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
+
+      {editingProject && (
+        <EditProjectDialog
+          project={editingProject}
+          open={!!editingProject}
+          onOpenChange={(open) => !open && setEditingProject(null)}
+        />
+      )}
+
+      {managingTeamProject && (
+        <ManageTeamDialog
+          project={managingTeamProject}
+          open={!!managingTeamProject}
+          onOpenChange={(open) => !open && setManagingTeamProject(null)}
+        />
       )}
     </div>
   )

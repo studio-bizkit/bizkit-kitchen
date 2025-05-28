@@ -1,49 +1,43 @@
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, Play, Square, Calendar, Users, CheckCircle2, Folder } from "lucide-react"
+import { Calendar, Users, Clock, Play, Pause } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { useTasks } from "@/hooks/useTasks"
-import { useActiveTimeEntry, useStartTimeTracking, useStopTimeTracking } from "@/hooks/useTimeTracking"
-import { useToast } from "@/hooks/use-toast"
+import { useTimeTracking } from "@/hooks/useTimeTracking"
+import { useToast } from "@/components/ui/use-toast"
+import { Tables } from "@/integrations/supabase/types"
+
+type Task = Tables<'tasks'> & {
+  assignee: Tables<'profiles'> | null
+  project: Tables<'projects'> | null
+}
 
 export function Dashboard() {
   const [trackingTime, setTrackingTime] = useState("00:00:00")
   const { data: projects = [], isLoading: projectsLoading } = useProjects()
   const { data: tasks = [], isLoading: tasksLoading } = useTasks()
-  const { data: activeEntry } = useActiveTimeEntry()
-  const startTracking = useStartTimeTracking()
-  const stopTracking = useStopTimeTracking()
   const { toast } = useToast()
+  const { activeEntry, isTracking, startTracking, stopTracking } = useTimeTracking()
 
-  const isTracking = !!activeEntry
-
-  // Update timer display
   useEffect(() => {
-    if (!activeEntry) {
-      setTrackingTime("00:00:00")
-      return
+    let interval: NodeJS.Timeout
+    if (isTracking && activeEntry) {
+      const startTime = new Date(activeEntry.start_time).getTime()
+      interval = setInterval(() => {
+        const now = new Date().getTime()
+        const diff = now - startTime
+        const hours = Math.floor(diff / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        setTrackingTime(
+          `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        )
+      }, 1000)
     }
-
-    const updateTimer = () => {
-      const start = new Date(activeEntry.start_time)
-      const now = new Date()
-      const diff = now.getTime() - start.getTime()
-      const hours = Math.floor(diff / (1000 * 60 * 60))
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-      
-      setTrackingTime(
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      )
-    }
-
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
     return () => clearInterval(interval)
-  }, [activeEntry])
+  }, [isTracking, activeEntry])
 
   const handleTimeTracking = async () => {
     try {
@@ -57,16 +51,17 @@ export function Dashboard() {
         await startTracking.mutateAsync({
           start_time: new Date().toISOString(),
           description: "General work time",
+          is_active: true,
         })
         toast({
           title: "Time tracking started",
           description: "Timer is now running.",
         })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       })
     }
@@ -97,182 +92,113 @@ export function Dashboard() {
   const teamMembers = new Set(projects.flatMap(p => p.project_members.map(m => m.user_id))).size
 
   if (projectsLoading || tasksLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500 mt-1">Loading your dashboard...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <div>Loading...</div>
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back! Here's what's happening with your projects.</p>
-        </div>
-        
-        {/* Time Tracking */}
-        <Card className="w-64">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span className="font-mono text-lg">{trackingTime}</span>
-              </div>
+      {/* Time Tracking Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold">Time Tracking</h2>
+              <p className="text-gray-500">Track your work hours</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-3xl font-mono">{trackingTime}</div>
               <Button
-                size="sm"
-                variant={isTracking ? "destructive" : "default"}
+                size="lg"
                 onClick={handleTimeTracking}
-                disabled={startTracking.isPending || stopTracking.isPending}
-                className={isTracking ? "" : "bg-primary hover:bg-primary/90"}
+                className={isTracking ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90"}
               >
-                {isTracking ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isTracking ? (
+                  <>
+                    <Pause className="w-4 h-4 mr-2" />
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Start
+                  </>
+                )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Active Projects</p>
-                <p className="text-2xl font-bold text-gray-900">{activeProjects.length}</p>
+                <h3 className="text-2xl font-bold mt-1">{activeProjects.length}</h3>
               </div>
-              <Folder className="w-8 h-8 text-primary" />
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Calendar className="w-6 h-6 text-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Pending Tasks</p>
-                <p className="text-2xl font-bold text-gray-900">{pendingTasks.length}</p>
+                <h3 className="text-2xl font-bold mt-1">{pendingTasks.length}</h3>
               </div>
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Clock className="w-6 h-6 text-primary" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Team Members</p>
-                <p className="text-2xl font-bold text-gray-900">{teamMembers}</p>
+                <h3 className="text-2xl font-bold mt-1">{teamMembers}</h3>
               </div>
-              <Users className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Hours This Week</p>
-                <p className="text-2xl font-bold text-gray-900">--</p>
+              <div className="p-3 bg-primary/10 rounded-full">
+                <Users className="w-6 h-6 text-primary" />
               </div>
-              <Clock className="w-8 h-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active Projects */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Projects</CardTitle>
-            <CardDescription>Your current projects and their progress</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {activeProjects.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No active projects yet.</p>
-            ) : (
-              activeProjects.map((project) => (
-                <div key={project.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {project.client ? project.client.name : 'Internal'}
-                      </p>
-                    </div>
-                    <Badge className={getStatusColor(project.status)}>
-                      {project.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{project.progress || 0}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${project.progress || 0}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {project.due_date || 'No due date'}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {project.project_members.length} members
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Tasks */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Tasks</CardTitle>
-            <CardDescription>Tasks that need your attention</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {pendingTasks.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No pending tasks.</p>
-            ) : (
-              pendingTasks.slice(0, 5).map((task) => (
-                <div key={task.id} className={`border-l-4 ${getPriorityColor(task.priority)} pl-4 py-2`}>
-                  <h4 className="font-medium text-gray-900">{task.title}</h4>
+      {/* Recent Tasks */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Tasks</CardTitle>
+          <CardDescription>Your most recent tasks and their status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {tasks.slice(0, 5).map((task) => (
+              <div
+                key={task.id}
+                className={`flex items-center justify-between p-4 rounded-lg border ${getPriorityColor(task.priority)}`}
+              >
+                <div>
+                  <h4 className="font-medium">{task.title}</h4>
                   <p className="text-sm text-gray-500">{task.project?.name}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <Badge variant="outline" className="text-xs">
-                      {task.priority}
-                    </Badge>
-                    <Button size="sm" variant="ghost" className="text-primary hover:text-primary/80">
-                      View
-                    </Button>
-                  </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                <Badge variant="secondary" className={getStatusColor(task.status)}>
+                  {task.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

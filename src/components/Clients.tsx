@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,11 +8,12 @@ import { useClients, useDeleteClient } from "@/hooks/useClients"
 import { CreateClientDialog } from "./CreateClientDialog"
 import { EditClientDialog } from "./EditClientDialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tables } from "@/integrations/supabase/types"
 
 export function Clients() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingClient, setEditingClient] = useState<any>(null)
+  const [editingClient, setEditingClient] = useState<Tables<'clients'> | null>(null)
   
   const { data: clients = [], isLoading, error } = useClients()
   const deleteClientMutation = useDeleteClient()

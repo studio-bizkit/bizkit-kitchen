@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -10,14 +9,16 @@ import { useCreateTask } from "@/hooks/useTasks"
 import { useAuth } from "@/components/auth/AuthProvider"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
+import { Tables } from "@/integrations/supabase/types"
 
 interface CreateTaskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
+  task?: Tables<'tasks'>
 }
 
-export function CreateTaskDialog({ open, onOpenChange, projectId }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onOpenChange, projectId, task }: CreateTaskDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
