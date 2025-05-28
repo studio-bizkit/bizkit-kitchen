@@ -15,35 +15,37 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/auth/AuthProvider"
 
+type View = "dashboard" | "projects" | "kanban" | "clients" | "time"
+
 interface AppSidebarProps {
-  currentView: string
-  onViewChange: (view: string) => void
+  currentView: View
+  onViewChange: (view: View) => void
 }
 
 const navigationItems = [
   {
     title: "Dashboard",
-    id: "dashboard",
+    id: "dashboard" as View,
     icon: Home,
   },
   {
     title: "Projects",
-    id: "projects",
+    id: "projects" as View,
     icon: Folder,
   },
   {
     title: "Kanban",
-    id: "kanban",
+    id: "kanban" as View,
     icon: Kanban,
   },
   {
     title: "Clients",
-    id: "clients",
+    id: "clients" as View,
     icon: Users,
   },
   {
     title: "Time Tracking",
-    id: "time",
+    id: "time" as View,
     icon: Clock,
   },
 ]
