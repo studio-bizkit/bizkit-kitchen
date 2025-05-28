@@ -1,9 +1,8 @@
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, Play, Square, Calendar, Users, CheckCircle2 } from "lucide-react"
+import { Clock, Play, Square, Calendar, Users, CheckCircle2, Folder } from "lucide-react"
 
 // Mock data - will be replaced with Supabase data
 const mockProjects = [
