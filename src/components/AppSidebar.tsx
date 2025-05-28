@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { ProfileCard } from "@/components/ProfileCard";
 import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type View =
   | "dashboard"
@@ -85,28 +86,27 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar className="border-r border-gray-200">
+    <Sidebar className="border-r border-black/20 dark:border-white/20 bg-white dark:bg-black">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-transparent flex items-center justify-center">
             <img src="/logo.png" alt="Kitchen Logo" className="w-10 h-10" />
           </div>
           <div>
-            <h2 className="font-bold text-lg">Kitchen</h2>
-            <p className="text-xs text-gray-500">Studio Bizkit</p>
+            <h2 className="font-bold text-lg text-black/80 dark:text-white/80">Kitchen</h2>
+            <p className="text-xs text-black/50 dark:text-white/50">Studio Bizkit</p>
           </div>
           <div className="w-10 h-10 bg-transparent flex items-center justify-center">
-            <div></div>
+            <ThemeToggle />
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-black/50 dark:text-white/50">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map(item => {
-                // Skip admin-only items if user is not admin
                 if (item.adminOnly && !isAdmin) return null;
 
                 return (
@@ -114,6 +114,7 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
                     <SidebarMenuButton
                       isActive={currentView === item.id}
                       onClick={() => onViewChange(item.id)}
+                      className="text-black/70 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10"
                     >
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
@@ -125,13 +126,13 @@ export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 border-t border-black/20 dark:border-white/20">
         <ProfileCard />
         <Button
           onClick={handleSignOut}
           variant="outline"
           size="sm"
-          className="w-full mt-4"
+          className="w-full mt-4 text-black/70 dark:text-white/70 border-black/20 dark:border-white/20 hover:bg-black/10 dark:hover:bg-white/10"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out

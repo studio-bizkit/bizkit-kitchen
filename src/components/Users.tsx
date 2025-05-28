@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label"
 import { useAuth, useIsAdminOrManager, useCanManageUser } from "@/hooks/useAuth"
 import { Tables } from "@/integrations/supabase/types"
+import { useToast } from "@/components/ui/use-toast"
 
 type User = Tables<'profiles'>
 
@@ -27,6 +28,7 @@ export function Users() {
   const createUserMutation = useCreateUser()
   const updateUserMutation = useUpdateUser()
   const deleteUserMutation = useDeleteUser()
+  const { toast } = useToast()
 
   const isAdminOrManager = useIsAdminOrManager()
 
@@ -69,9 +71,18 @@ export function Users() {
 
     try {
       await createUserMutation.mutateAsync({ email, role, department })
+      toast({
+        title: "Success",
+        description: "User invited successfully."
+      })
       setShowCreateDialog(false)
     } catch (error) {
       console.error('Failed to create user:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create user"
+      })
     }
   }
 
@@ -88,18 +99,36 @@ export function Users() {
         id: editingUser.id,
         updates: { role, department }
       })
+      toast({
+        title: "Success",
+        description: "User updated successfully."
+      })
       setEditingUser(null)
     } catch (error) {
       console.error('Failed to update user:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update user"
+      })
     }
   }
 
   const handleDeleteUser = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
         await deleteUserMutation.mutateAsync(id)
+        toast({
+          title: "Success",
+          description: "User has been deleted successfully."
+        })
       } catch (error) {
         console.error('Failed to delete user:', error)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to delete user"
+        })
       }
     }
   }

@@ -10,6 +10,10 @@ import { useAuth } from "@/components/auth/AuthProvider"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { Tables } from "@/integrations/supabase/types"
+import { useProjectMembers } from "@/hooks/useProjectMembers"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
+import { PostgrestError } from "@supabase/supabase-js"
 
 interface CreateTaskDialogProps {
   open: boolean
@@ -28,13 +32,52 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, task }: Create
   
   const { user } = useAuth()
   const createTaskMutation = useCreateTask()
+  const { data: projectMembers } = useProjectMembers(projectId)
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!user || !projectId) return
+    if (!user || !projectId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to create a task."
+      })
+      return
+    }
 
     try {
+      // First, check if user is a project member
+      const isMember = projectMembers?.some(member => member.user_id === user.id)
+      
+      if (!isMember) {
+        // Add user as a project member if they're not already one
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: projectId,
+            user_id: user.id,
+            role: 'admin' // Using 'admin' since the user is an admin
+          })
+
+        if (memberError) {
+          console.error('Failed to add user as project member:', memberError)
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: `Failed to add you as a project member: ${memberError.message}`
+          })
+          return
+        }
+
+        toast({
+          title: "Success",
+          description: "You have been added as a project member."
+        })
+      }
+
+      // Now create the task
       await createTaskMutation.mutateAsync({
         title,
         description: description || null,
@@ -46,6 +89,11 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, task }: Create
         status: 'todo'
       })
 
+      toast({
+        title: "Success",
+        description: "Task created successfully."
+      })
+
       // Reset form
       setTitle("")
       setDescription("")
@@ -54,8 +102,14 @@ export function CreateTaskDialog({ open, onOpenChange, projectId, task }: Create
       setTags([])
       setTagInput("")
       onOpenChange(false)
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to create task:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to create task: ${errorMessage}`
+      })
     }
   }
 

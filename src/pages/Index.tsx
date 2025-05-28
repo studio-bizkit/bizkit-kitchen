@@ -69,7 +69,7 @@ function AppContent() {
             </SidebarTrigger>
           </header>
           
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-6 overflow-auto bg-white dark:bg-black">
             {renderContent()}
           </div>
         </main>

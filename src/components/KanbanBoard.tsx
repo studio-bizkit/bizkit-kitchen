@@ -16,10 +16,10 @@ import { createPortal } from "react-dom"
 import { Tables } from "@/integrations/supabase/types"
 
 const columns = [
-  { id: "todo", title: "To Do", color: "bg-gray-100" },
-  { id: "inprogress", title: "In Progress", color: "bg-blue-100" },
-  { id: "review", title: "Review", color: "bg-yellow-100" },
-  { id: "done", title: "Done", color: "bg-green-100" }
+  { id: "todo", title: "To Do", color: "bg-gray-100 dark:bg-gray-800" },
+  { id: "inprogress", title: "In Progress", color: "bg-gray-100 dark:bg-gray-800" },
+  { id: "review", title: "Review", color: "bg-gray-100 dark:bg-gray-800" },
+  { id: "done", title: "Done", color: "bg-gray-100 dark:bg-gray-800" }
 ]
 
 export function KanbanBoard() {

@@ -35,25 +35,49 @@ export function useCreateUser() {
       role: UserRole
       department: UserDepartment
     }) => {
-      // First, create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(email)
-      if (authError) throw authError
+      try {
+        // First, create the profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            email,
+            role,
+            department,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
 
-      // Then create the profile
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
+        if (profileError) throw profileError
+
+        // Then send magic link to the user
+        const { error: authError } = await supabase.auth.signInWithOtp({
           email,
-          role,
-          department,
-          created_at: new Date().toISOString(),
+          options: {
+            data: {
+              role,
+              department
+            }
+          }
         })
-        .select()
-        .single()
 
-      if (error) throw error
-      return data
+        if (authError) {
+          // If auth fails, delete the profile
+          await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', profile.id)
+          throw authError
+        }
+
+        return profile
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to create user: ${error.message}`)
+        }
+        throw error
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -66,14 +90,47 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: TablesUpdate<'profiles'> }) => {
+      // Ensure we have the required fields
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+
+      // Remove any undefined or null values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null) {
+          delete updateData[key]
+        }
+      })
+
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // If the error is about missing department column, try to create it
+        if (error.code === 'PGRST204' && error.message?.includes('department')) {
+          // First, try to add the column
+          const { error: alterError } = await supabase.rpc('add_department_column')
+          if (alterError) throw alterError
+
+          // Then retry the update
+          const { data: retryData, error: retryError } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single()
+
+          if (retryError) throw retryError
+          return retryData
+        }
+        throw error
+      }
+
       return data
     },
     onSuccess: () => {
@@ -87,17 +144,20 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // First delete the profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id)
+      try {
+        // Call the server-side function to delete the user
+        const { error } = await supabase
+          .rpc('delete_user', { user_id: id })
 
-      if (profileError) throw profileError
+        if (error) throw error
 
-      // Then delete the user from auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(id)
-      if (authError) throw authError
+        return { id }
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(`Failed to delete user: ${error.message}`)
+        }
+        throw error
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
