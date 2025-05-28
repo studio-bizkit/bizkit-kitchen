@@ -1,5 +1,5 @@
 
-import { Calendar, Clock, Folder, Home, Kanban, Users } from "lucide-react"
+import { Calendar, Clock, Folder, Home, Kanban, Users, LogOut } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -10,32 +10,55 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth/AuthProvider"
+
+interface AppSidebarProps {
+  currentView: string
+  onViewChange: (view: string) => void
+}
 
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "/",
+    id: "dashboard",
     icon: Home,
   },
   {
     title: "Projects",
-    url: "/projects",
+    id: "projects",
     icon: Folder,
   },
   {
+    title: "Kanban",
+    id: "kanban",
+    icon: Kanban,
+  },
+  {
     title: "Clients",
-    url: "/clients",
+    id: "clients",
     icon: Users,
   },
   {
     title: "Time Tracking",
-    url: "/time",
+    id: "time",
     icon: Clock,
   },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({ currentView, onViewChange }: AppSidebarProps) {
+  const { signOut, user } = useAuth()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
   return (
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="p-4">
@@ -56,11 +79,12 @@ export function AppSidebar() {
             <SidebarMenu>
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors">
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.title}</span>
-                    </a>
+                  <SidebarMenuButton 
+                    isActive={currentView === item.id}
+                    onClick={() => onViewChange(item.id)}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -68,6 +92,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-4">
+        <div className="space-y-2">
+          <p className="text-sm text-gray-500">{user?.email}</p>
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            size="sm"
+            className="w-full"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

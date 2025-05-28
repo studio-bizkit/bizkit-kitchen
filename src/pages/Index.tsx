@@ -7,11 +7,29 @@ import { Projects } from "@/components/Projects"
 import { KanbanBoard } from "@/components/KanbanBoard"
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
+import { AuthProvider, useAuth } from "@/components/auth/AuthProvider"
+import { LoginForm } from "@/components/auth/LoginForm"
 
 type View = "dashboard" | "projects" | "kanban" | "clients" | "time"
 
-const Index = () => {
+function AppContent() {
   const [currentView, setCurrentView] = useState<View>("dashboard")
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold">Loading...</h2>
+          <p className="text-gray-500">Please wait while we load your dashboard</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginForm />
+  }
 
   const renderContent = () => {
     switch (currentView) {
@@ -25,14 +43,14 @@ const Index = () => {
         return (
           <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-            <p className="text-gray-500">Client management coming soon...</p>
+            <p className="text-gray-500">Client management features are being built...</p>
           </div>
         )
       case "time":
         return (
           <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900">Time Tracking</h1>
-            <p className="text-gray-500">Time tracking features coming soon...</p>
+            <p className="text-gray-500">Advanced time tracking features are being built...</p>
           </div>
         )
       default:
@@ -43,7 +61,7 @@ const Index = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        <AppSidebar />
+        <AppSidebar currentView={currentView} onViewChange={setCurrentView} />
         <main className="flex-1 flex flex-col">
           <header className="bg-white border-b border-gray-200 p-4 lg:hidden">
             <SidebarTrigger>
@@ -59,6 +77,14 @@ const Index = () => {
         </main>
       </div>
     </SidebarProvider>
+  )
+}
+
+const Index = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
